@@ -1,0 +1,25 @@
+%YAML:1.0
+---
+cameraType: -1 # <0:工业相机   >=0：免驱相机
+patternType: 0  #0:方格  1：圆点
+imgPath: ../others/calibration/
+
+#相机原点相对与发射点的坐标
+
+chessBoardSize: [ 8, 5 ]
+rectSize: [ 100, 100 ]
+
+
+cameraMatrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 3.6661586726975470e+03, 0., 3.3427287806661717e+01, 0.,
+       3.7395744368614510e+03, 3.6888230138399933e+01, 0., 0., 1. ]
+distCoeffs: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -6.4915870786348340e-01, -2.4232462102810750e+00,
+       2.4503076592680043e-02, 8.6966357085949464e-02,
+       8.6593085594045007e+00 ]
