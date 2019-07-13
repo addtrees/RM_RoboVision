@@ -1,7 +1,0 @@
-/home/hero/environment/安装包/clion/clion-2018.2.5/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/hero/CLionProjects/DroneVision
-project name:DroneVision
--- Found OpenCV: /usr/local (found suitable version "3.4.3", minimum required is "3.4.3") 
-OpenCV Version:3.4.3
--- Configuring done
--- Generating done
--- Build files have been written to: /home/hero/CLionProjects/DroneVision/cmake-build-debug

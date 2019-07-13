@@ -2,6 +2,8 @@
 // Created by hero on 19-6-13.
 //
 
+#include <ProcessStep.h>
+
 #include "ProcessStep.h"
 
 
@@ -18,19 +20,37 @@ void ballisticSolution(cv::Mat positionInfo,int droneState[3],cv::Point &targetP
 
 }
 
-Point decision(ArmorDetect &detector,AngleSolve &angleSolver) {
-    if(detector.armors.empty()){
+Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj) {
+    if(!(solveObj==SOLVE_OBJ_ARMOR ||solveObj==SOLVE_OBJ_AREAX)){
+        perror("solve type is unsurported!");
+        angleSolver.targetPt=angleSolver.imgCenter;
+        return angleSolver.imgCenter;
+    }
+    if((solveObj==SOLVE_OBJ_ARMOR&&detector.armors.empty())||
+       (solveObj==SOLVE_OBJ_AREAX&&detector.areaXs.empty())){
         angleSolver.targetPt=angleSolver.imgCenter;
         return angleSolver.targetPt;
     }
     vector<Point> targetPts;
     vector<Point3f> ptsPosition;
-    for(int i=0;i<detector.armors.size();++i){
-        Point temp=angleSolver.getAngle_Pixel(detector.armors[i].v_corners,detector.armors[i].isNormalArmor);
-        Point3f tempDist=Point3f(angleSolver.CX,angleSolver.CY,angleSolver.CZ);
-        targetPts.emplace_back(temp);
-        ptsPosition.emplace_back(tempDist);
-        circle(detector.sketch,temp,3,Scalar(255,255,255));
+    if(solveObj==SOLVE_OBJ_ARMOR){
+        for(int i=0;i<detector.armors.size();++i){
+            Point temp=angleSolver.getAngle_Pixel(detector.armors[i].v_corners,
+                                                  SOLVE_OBJ_ARMOR,
+                                                  detector.armors[i].isNormalArmor);
+            Point3f tempDist=Point3f(angleSolver.CX,angleSolver.CY,angleSolver.CZ);
+            targetPts.emplace_back(temp);
+            ptsPosition.emplace_back(tempDist);
+            circle(detector.sketch,temp,3,Scalar(255,255,255));
+        }
+    } else{
+        for(int i=0;i<detector.areaXs.size();++i){
+            Point temp=angleSolver.getAngle_Pixel(detector.areaXs[i].v_corners,SOLVE_OBJ_AREAX);
+            Point3f tempDist=Point3f(angleSolver.CX,angleSolver.CY,angleSolver.CZ);
+            targetPts.emplace_back(temp);
+            ptsPosition.emplace_back(tempDist);
+            circle(detector.sketch,temp,2,Scalar(255,255,255));
+        }
     }
     int index=0;
     double distance=sqrt(pow(targetPts[0].x-detector.imgCenter.x,2)
@@ -43,11 +63,25 @@ Point decision(ArmorDetect &detector,AngleSolve &angleSolver) {
             index=i;
         }
     }
-    detector.finalArmor=detector.armors[index];
+    if(solveObj==SOLVE_OBJ_ARMOR)
+        detector.finalArmor=detector.armors[index];
+    else
+        detector.finalAreaX=detector.areaXs[index];
     angleSolver.targetPt=targetPts[index];
     cout<<"target point:"<<targetPts[index]<<endl;
     cout<<"position:"<<ptsPosition[index]<<endl;
     return angleSolver.targetPt;
+}
+
+Point decisionX(ArmorDetect &detector, AngleSolve &angleSolver) {
+    if(detector.areaXs.empty()){
+        angleSolver.targetPt=angleSolver.imgCenter;
+        return angleSolver.targetPt;
+    }
+    vector<Point> targetPts;
+    vector<Point3f> ptsPosition;
+
+    return cv::Point();
 }
 
 void printLoopTime(Timer &timer){    cout<<"time: "<<timer.getLoopTime()<<" ms"<<endl; }
@@ -61,8 +95,8 @@ void averageFPS(Timer &timer){    cout<<"average FPS:"<<1/timer.averageTime()*10
 void printDate(Timer &timer){  cout<<"Date: "<<timer.getDate()<<endl;  }
 
 char droneWaitKey(Setting &setter){
-    setter.key=waitKey(setter.droneWaitkey);
-    switch(static_cast<char>(setter.key)){
+    setter.key=char(waitKey(setter.droneWaitkey));
+    switch(setter.key){
         case 'x':
             setter.droneWaitkey=0;
             break;
@@ -77,8 +111,11 @@ char droneWaitKey(Setting &setter){
             setter.savePic=1;
             break;
         case 'q':
-            exit(-2);
+            setter.key='q';
+            break;
         default:
+            if(setter.droneWaitkey==0)
+                setter.readOneFrame=1;
             setter.writerFlag=setter.saveVideo;
             break;
     }
@@ -156,11 +193,11 @@ void write2Serial(AngleSolve &solve, Serial &serial,bool isDetected) {
     if(i==10){
         if(serial.showTxMsg){
             cout<<serial.portName<<" Tx:";
-            for(int k=0;i<10;++i)
+            for(int k=0;k<10;++k)
                 cout<<" "<<int(data[k]);
             cout<<endl;
         }
     } else
-        perror("serial send message failed.");
+        perror("serial send message failed");
 }
 

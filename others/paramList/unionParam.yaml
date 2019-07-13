@@ -1,0 +1,87 @@
+%YAML:1.0
+---
+#最重要的参数
+enemyColor: 1                            # 0:blue  1:red  2:all
+
+
+#相机调节参数
+isVideo: 1
+cameraType: -1 # <0:工业相机   >=0：免驱相机
+videoPath: ../others/video/3.avi
+imgSize: [1280, 800 ]
+offset: [0, 150 ]
+exposureTime: 7
+
+
+#调试变量显示控制开关
+showOrigin:   0
+showGray:     0
+showBinary:   0
+showLEDbar:   0
+showDraw:     1
+showSlideBar: 0
+#图像处理参数
+thresh:          100
+minLEDBarLength: 12
+hullRatio:       0.25
+pixelDiffRatio:  0.2                     #红蓝通道像素差值的比例
+pixelCount:      0.7
+purpleRatio:     1.3
+LEDHWRatioMin:   2.0
+LEDHWRatioMax:   12.
+normalArmorSize: [ 130.4, 111.56 ]       #宽度130.4为两灯条中心距   高度111.56为灯条高度的两倍
+largeArmorSize:  [ 225.4, 111.56 ]
+barLMaxRatio:    1.8
+barWMaxRatio:    -1.
+barAMaxRatio:    -1.
+angleDiff:       10.0
+centerDist:      4.8                     #计算标准值为4.04，留一定余量
+barLMaxRatioX:   1.8                     #八字区域的两灯条长度差异比例
+centerDistX:     2.0                     #实际尺寸计算得到的是中间距离为灯条长度的1.87倍
+
+#角度解算和标定参数
+patternType: 0  #0:方格  1：圆点
+imgPath: ../others/calibration/
+
+chessBoardSize: [ 8, 5 ]
+rectSize: [ 100, 100 ]
+
+showTargetAngle: 1
+showTargetPt: 1
+
+cameraMatrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 3.6661586726975470e+03, 0., 3.3427287806661717e+01, 0.,
+       3.7395744368614510e+03, 3.6888230138399933e+01, 0., 0., 1. ]
+distCoeffs: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -6.4915870786348340e-01, -2.4232462102810750e+00,
+       2.4503076592680043e-02, 8.6966357085949464e-02,
+       8.6593085594045007e+00 ]
+
+#串口通信控制参数
+portName: /dev/ttyUSB0
+showRxMsg: 1
+showTxMsg: 1
+inwar: 0
+
+
+#全局设置参数
+detectMode:    1            # 0:detect normally armor board, 1:detect the X area
+showOrigin:    0
+showGray:      0
+showBinary:    0
+showLEDbar:    0
+showDraw:      0
+printTxMsg:    0
+printRxMsg:    0
+printArmorPos: 0
+printLoopTime: 0
+droneWaitkey:  1
+saveVideo:     0
+savePic:       0
+

@@ -1,14 +1,15 @@
 %YAML:1.0
 ---
-showOrigin: 0
-showGray: 0
-showBinary: 0
-showLEDbar: 0
-showDraw: 0
-printTxMsg: 0
-printRxMsg: 0
+detectMode:    1            # 0:detect normally armor board, 1:detect the X area
+showOrigin:    0
+showGray:      0
+showBinary:    0
+showLEDbar:    0
+showDraw:      0
+printTxMsg:    0
+printRxMsg:    0
 printArmorPos: 0
 printLoopTime: 0
-droneWaitkey: 1
-saveVideo: 0
-savePic: 0
+droneWaitkey:  1
+saveVideo:     0
+savePic:       0

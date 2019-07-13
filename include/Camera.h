@@ -7,6 +7,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <unistd.h>
 #include "MindVisionCamera.h"
 #include "CameraDefine.h"
 #include "CameraStatus.h"

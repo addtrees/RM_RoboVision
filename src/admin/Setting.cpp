@@ -10,6 +10,7 @@ Setting::Setting(string settingParamPath) {
     fs.isOpened()?cout<<"    opened."<<endl<<endl:cout<<"    open failed."<<endl<<endl;
     if(!fs.isOpened())
         exit(-1);
+    fs["detectMode"]>>detectMode;
     fs["showOrigin"]>>showOrigin;
     fs["showGray"]>>showGray;
     fs["showBinary"]>>showBinary;

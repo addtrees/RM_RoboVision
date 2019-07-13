@@ -11,6 +11,8 @@ AngleSolve::AngleSolve(string pnpParamPath) {
         exit(-1);
     fs["cameraMatrix"]>>cameraMatrix;
     fs["distCoffs"]   >>distCoeffs;
+    fs["showTargetAngle"]>>showTargetAngle;
+    fs["showTargetPt"]>>showTargetPt;
     fs.release();
     get3dPoint();
     focalX=cameraMatrix.at<double>(0,0);
@@ -38,11 +40,13 @@ void AngleSolve::setSize(Size size,Point offset) {
 //        P0     *y    P3
  */
 void AngleSolve::get3dPoint() {
-    float x,y,xL,yL;
+    float x,y,xL,yL,tX,dX,hX;
     x=normalArmorSize.width/2,y=normalArmorSize.height/2;
     xL=largeArmorSize.width/2,yL=largeArmorSize.height/2;
+    tX=areaXTop/2,dX=areaXDown/2,hX=areaXHeight/2;
     vector<Point3f>{Point3f(-x,y,0),Point3f(-x,-y,0),Point3f(x,-y,0),Point3f(x,y,0)}.swap(normalArmorPts3D);
     vector<Point3f>{Point3f(-xL,yL,0),Point3f(-xL,-yL,0),Point3f(xL,-yL,0),Point3f(xL,yL,0)}.swap(largeArmorPts3D);
+    vector<Point3f>{Point3f(-dX,hX,0),Point3f(-tX,-hX,0),Point3f(tX,-hX,0),Point3f(dX,hX,0)}.swap(areaXPts3D);
 }
 
 /*************************************************************
@@ -185,7 +189,11 @@ void AngleSolve::getAngle_3DSolve(vector<Point2f> &points, bool isNormalArmor) {
     reconstruct2Img();
 }
 
-Point AngleSolve::getAngle_Pixel(vector<Point2f> &points, bool isNormalArmor) {
+Point AngleSolve::getAngle_Pixel(vector<Point2f> &points,int solveObj,bool isNormalArmor) {
+    if(!(solveObj==SOLVE_OBJ_ARMOR || solveObj==SOLVE_OBJ_AREAX)){
+        perror("solve type unsurported!");
+        return imgCenter;  //返回图像中心相当于不作为
+    }
     //这里检查是为了防止传入错误的点，而不是应对没有检测到装甲的情况，没有检测到装甲就没有可传入的角点
     if(points.size()!=4){
         perror("the number of points for angle solve is not allow !!!");
@@ -195,9 +203,12 @@ Point AngleSolve::getAngle_Pixel(vector<Point2f> &points, bool isNormalArmor) {
     reconstructionPt.x=double(imgSize.width)/2+offset.x+CX/CZ*focalX;
     reconstructionPt.y=double(imgSize.height)/2+offset.y+CY/CZ*focalY;
     double height=altitude-baseHeight;
-    vector<Point3f> armorCorners3D=isNormalArmor?normalArmorPts3D:largeArmorPts3D;
     Point center=Point(imgSize.width/2-30+offset.x,imgSize.height/2-35+offset.y);
-    pnp(points,armorCorners3D,center,cameraMatrix,distCoeffs,rvec,tvec);
+    if(solveObj==SOLVE_OBJ_ARMOR){
+        vector<Point3f> armorCorners3D=isNormalArmor?normalArmorPts3D:largeArmorPts3D;
+        pnp(points,armorCorners3D,center,cameraMatrix,distCoeffs,rvec,tvec);
+    }else
+        pnp(points,areaXPts3D,center,cameraMatrix,distCoeffs,rvec,tvec);
     getCCS();
     double lineDist=sqrt(CX*CX+CY*CY+CZ*CZ);  //相机与装甲的直线距离
     double theta=asin(height/lineDist);       //装甲和发射连线与竖直轴的夹角（弧度制）,恒为正

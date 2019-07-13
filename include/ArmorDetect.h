@@ -32,12 +32,23 @@ public:
     bool isNormalArmor= true;
 };
 
+struct AreaX{
+public:
+    void set(RotatedRect &rect1,RotatedRect &rect2);
+    Point center;
+    Point2f corners[4];
+    vector<Point2f> v_corners;
+    double axisAngle;
+    bool empty=true;
+};
+
 struct Interval{ float min=0,max=0;};
 
 class ArmorDetect {
 public:
     explicit ArmorDetect(string detectParamPath);
     int findArmor(Mat &frame,vector<Armor> &armors);
+    int findLEDX(Mat &frame,vector<AreaX> &areaX);
     void writeParams(string filePath);
     void setSize(Size size,Point offset);
     void resetAll();
@@ -46,9 +57,12 @@ public:
     Mat gray;
     Mat binary;
     Mat sketch;
+    Mat BGR2HSV_M=Mat(3,3,CV_64FC1);
     vector<Armor> armors;
     vector<Mat>   rectArmors;
     Armor         finalArmor;
+    vector<AreaX> areaXs;
+    AreaX         finalAreaX;
     Point offset   =Point(0,150);
     Size  imgSize  =Size(1280,800);
     Point imgCenter=Point(640,250);
@@ -66,9 +80,10 @@ private:
     void binaryProcess(Mat &gray,Mat &binary,int thresh,int show);
     void contoursProcess(Mat &binary,vector<vector<Point>> &contours);
     void LEDMatch(vector<vector<Point>> &contours,vector<Armor> &armors);
+    void LEDMatchX(vector<vector<Point>> &contours,vector<AreaX> &areaXs);
     void transfromArmorPic(vector<Armor> &armors,vector<Mat> &rectArmor);
 
-/**************过程变量，每次检测之前将会由resetAll()清空***/
+/************过程变量，每次检测之前将会由resetAll()清空********/
     vector<vector<Point>> contours;  //所有轮廓
     vector<vector<Point>> finalHulls;
     vector<vector<Point>> LEDBar;    //灯条轮廓
@@ -83,10 +98,13 @@ private:
     float hullRatio     =-1;   //轮廓面积与其凸包面积之比
     float pixelDiffRatio=-1;   //单个像素点像素值的差异
     float pixelCount    =-1;   //整个轮廓上红蓝像素点的统计结果，数量占比
+    float purpleRatio   =-1;   //thread of C0/C2 ratio
     float barLMaxRatio  =-1;   //两灯条长度与平均值的比例
     float barWMaxRatio  =-1;   //两灯条宽度与平均值的比例
     float barAMaxRatio  =-1;   //两灯条面积与平均值的比例
     float angleDiff     =-1;   //两灯条的角度差异
     float centerDist    =-1;   //中心距与灯条长度均值的比值
+    float barLMaxRatioX =-1;
+    float centerDistX   =-1;   //八字形区域的灯条中心距
 };
 #endif //DRONEVISION_ARMORDETECT_H

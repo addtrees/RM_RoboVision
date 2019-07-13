@@ -1,6 +1,8 @@
 //
 // Created by hero on 19-5-31.
 //
+#include <ArmorDetect.h>
+
 #include "ArmorDetect.h"
 
 void Armor::set(cv::Point corner[4]) {
@@ -42,13 +44,39 @@ void Armor::set(RotatedRect &rect1,RotatedRect &rect2){
     empty=false;
 }
 
+
+void AreaX::set(RotatedRect &rect1, RotatedRect &rect2) {
+    vector<Point2f>().swap(v_corners);
+    Point2f pts1[4],pts2[4];
+    Point2f p0,p1,p2,p3;
+    if(rect1.center.x<rect2.center.x){
+        rect1.points(pts1);
+        rect2.points(pts2);
+    } else{
+        rect1.points(pts2);
+        rect2.points(pts1);
+    }
+    p0=rect1.angle>=90?(pts1[1]+pts1[2])/2:(pts1[0]+pts1[3])/2;
+    p1=rect1.angle>=90?(pts1[0]+pts1[3])/2:(pts1[1]+pts1[2])/2;
+    p2=rect2.angle>=90?(pts2[0]+pts2[3])/2:(pts2[1]+pts2[2])/2;
+    p3=rect2.angle>=90?(pts2[1]+pts2[2])/2:(pts2[0]+pts2[3])/2;
+    v_corners.emplace_back(corners[0]=p0);
+    v_corners.emplace_back(corners[1]=p1);
+    v_corners.emplace_back(corners[2]=p2);
+    v_corners.emplace_back(corners[3]=p3);
+    center=(p0+p1+p2+p3)/4;
+    Point2f axis=((p0+p3)/2)-((p1+p2)/2);
+    axisAngle=atan(axis.x/axis.y)*180/CV_PI;
+    empty=false;
+}
+
 template <typename T>
 void textToImage(Mat &src,T text,Point position){
     char str[100];
     stringstream ss;
     ss<<text;
     ss>>str;
-    putText(src,str,position,FONT_HERSHEY_SIMPLEX,0.6,Scalar(0,0,255));
+    putText(src,str,position,FONT_HERSHEY_SIMPLEX,0.6,Scalar(0,255,255));
 }
 
 /**************************************************************
@@ -74,6 +102,7 @@ ArmorDetect::ArmorDetect(const string detectParamPath) {
         fs["hullRatio"]       >>hullRatio;
         fs["pixelDiffRatio"]  >>pixelDiffRatio;
         fs["pixelCount"]      >>pixelCount;
+        fs["purpleRatio"]     >>purpleRatio;
         fs["LEDHWRatioMin"]   >>LEDHWRatio.min;
         fs["LEDHWRatioMax"]   >>LEDHWRatio.max;
         fs["normalArmorSize"] >>normalArmorSize;
@@ -83,8 +112,19 @@ ArmorDetect::ArmorDetect(const string detectParamPath) {
         fs["barAMaxRatio"]    >>barAMaxRatio;
         fs["angleDiff"]       >>angleDiff;
         fs["centerDist"]      >>centerDist;
+        fs["barLMaxRatioX"]   >>barLMaxRatioX;
+        fs["centerDistX"]     >>centerDistX;
     }
     fs.release();
+    BGR2HSV_M.at<double>(0,0)=0.412411;
+    BGR2HSV_M.at<double>(1,0)=0.357585;
+    BGR2HSV_M.at<double>(2,0)=0.180454;
+    BGR2HSV_M.at<double>(1,0)=0.212649;
+    BGR2HSV_M.at<double>(1,1)=0.715169;
+    BGR2HSV_M.at<double>(1,2)=0.072182;
+    BGR2HSV_M.at<double>(2,0)=0.019332;
+    BGR2HSV_M.at<double>(2,1)=0.119195;
+    BGR2HSV_M.at<double>(2,2)=0.950390;
 }
 
 /**************************************************************
@@ -114,11 +154,11 @@ void ArmorDetect::toGray(Mat &src, Mat &gray,const int showGray){
 }
 
 void ArmorDetect::binaryProcess(Mat &gray,Mat &binary,int thresh,int showBinary) {
+    threshold(gray,binary,thresh,255,THRESH_BINARY);
     if(showBinary){
         imshow("binary",binary);
         createTrackbar("Thresh","Slider",&thresh,255);
     }
-    threshold(gray,binary,thresh,255,THRESH_BINARY);
 }
 
     /**************************************************************
@@ -142,8 +182,8 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
         if(ellipse.size.height/ellipse.size.width > LEDHWRatio.max ||
            ellipse.size.height/ellipse.size.width < LEDHWRatio.min){
             if(showDraw){
-                char str[20];
-                sprintf(str,"H_W:%f",ellipse.size.height/ellipse.size.width);
+                char str[100];
+                sprintf(str,"H_W:%2.2f",ellipse.size.height/ellipse.size.width);
                 putText(sketch,str,ellipse.center,FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,255,255));
             }
             contours.erase(contours.begin()+(i--));
@@ -161,8 +201,8 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
         float areaProportion=(hullA-contourA)/hullA;    //面积占比
         if(areaProportion>hullRatio){
             if(showDraw){
-                char str[20];
-                sprintf(str,"Ar:%f",areaProportion);
+                char str[100];
+                sprintf(str,"Ar:2.2%f",areaProportion);
                 putText(sketch,str,contours[i][0],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,255,255));
             }
             contours.erase(contours.begin()+i);
@@ -177,29 +217,48 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
      * 将符合颜色条件的轮廓都压入hulls中，进行下一步匹配工作
      */
     for(int i=0;i<contours.size();++i){
-        int ptRed=0,ptBlue=0;                                      //红蓝颜色点的数量
+        int ptRed=0,ptBlue=0,ptPurple=0;                           //红蓝颜色点的数量
+        int channel0=0,channel1=0,channel2=0;
         for(int j=0;j<contours[i].size();++j){                     //统计红蓝颜色像素数量
-            int pixelDiff=src.at<Vec3b>(contours[i][j])[0]-src.at<Vec3b>(contours[i][j])[2];
-            int pixelSum =src.at<Vec3b>(contours[i][j])[0]+src.at<Vec3b>(contours[i][j])[2];
+            Mat BGR(3,1,CV_64FC1);
+            Mat HSV(3,1,CV_64FC1);
+            channel0=src.at<Vec3b>(contours[i][j])[0];
+            channel1=src.at<Vec3b>(contours[i][j])[1];
+            channel2=src.at<Vec3b>(contours[i][j])[2];
+            BGR.at<double>(0,0)=channel0;
+            BGR.at<double>(0,1)=channel1;
+            BGR.at<double>(0,2)=channel2;
+            HSV=BGR2HSV_M*BGR;
+            int pixelDiff=channel0-channel2;
+            int pixelSum =channel0+channel2;
             //为蓝,且像素差值大于0 2两通道像素值之和的一定比例
             if(pixelDiff>0 && pixelDiff>pixelSum*pixelDiffRatio)
                 ptBlue++;
             else if(pixelDiff<0 && -pixelDiff>pixelSum*pixelDiffRatio)
                 ptRed++;
+            else if((float(channel0)/channel2>1.0/purpleRatio)
+                  &&(float(channel0)/channel2<purpleRatio)
+                  &&(channel0+channel2)/2>channel1){
+                ptPurple++;
+//                cout<<"BGR:"<<BGR<<" HSV:"<<HSV<<endl;
+            }
+
         }
         if(showDraw){
-            char str[20];
-            sprintf(str,"B:%d R:%d",ptBlue,ptRed);
-            putText(sketch,str,ellipses[i].center,FONT_HERSHEY_SIMPLEX,0.4,Scalar(0,255,0));
+            char str[100];
+            sprintf(str,"B:%1d R:%1d P:%1d",ptBlue,ptRed,ptPurple);
+            putText(sketch,str,ellipses[i].center,FONT_HERSHEY_SIMPLEX,0.3,Scalar(0,255,0));
         }
-        if((enemyColor==BLUE && (float(ptBlue)/(ptBlue+ptRed))>pixelCount) ||  //符合设定颜色条件
-            (enemyColor==RED && (float(ptRed) /(ptBlue+ptRed))>pixelCount)){
+        //the contours which can fit this condition is suitable for the color select
+        if((enemyColor==BLUE && (float(ptBlue)/contours[i].size())>pixelCount)||  //符合设定颜色条件
+           (enemyColor==RED  && (float(ptRed)/contours[i].size())>pixelCount) ||
+                                (float(ptPurple/contours[i].size()>pixelCount*0.9))){
             if(showDraw){
                 Point2f pts[4];
-                ellipse(sketch,ellipses[i],Scalar(255,0,0),1,LINE_AA);
+                ellipse(sketch,ellipses[i],Scalar(255,0,0),2,LINE_AA);
                 ellipses[i].points(pts);
                 for(int k=0;k<4;++k){
-                    char str[4];
+                    char str[10];
                     sprintf(str,"%d",k);
                     putText(sketch,str,pts[k],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,255,0));
                 }
@@ -207,12 +266,18 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
         }
         else{
             if(showDraw){
-                char str[20];
-                if(enemyColor==BLUE)
-                    sprintf(str,"color:%f",float(ptBlue)/(ptBlue+ptRed));
-                else
-                    sprintf(str,"color:%f",float(ptRed)/(ptBlue+ptRed));
-                putText(sketch,str,contours[i][0],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,255,255));
+                char str[100];
+                if(enemyColor==BLUE){
+                    sprintf(str,"BLUE:%2.2f",float(ptBlue)/contours[i].size());
+                    putText(sketch,str,contours[i][0],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,0,0));
+                }
+                else if(enemyColor==RED){
+                    sprintf(str,"RED:%2.2f",float(ptRed)/contours[i].size());
+                    putText(sketch,str,contours[i][0],FONT_HERSHEY_SIMPLEX,0.4,Scalar(0,0,255));
+                }else if(ptPurple>ptBlue&&ptPurple>ptRed){
+                    sprintf(str,"PUR:%2.2f",float(ptBlue)/contours[i].size());
+                    putText(sketch,str,contours[i][0],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,0,255));
+                }
             }
             contours.erase(contours.begin()+i);
             ellipses.erase(ellipses.begin()+(i--));
@@ -226,24 +291,29 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
 void ArmorDetect::LEDMatch(vector<vector<Point>> &contours,vector<Armor> &armors) {
     vector<Armor>().swap(armors);
     for(int i=0;i<ellipses.size();++i){
+//        char str[10];                          //查看拟合椭圆的角度
+//        sprintf(str,"%1.0f",ellipses[i].angle);
+//        putText(src,str,ellipses[i].center,FONT_HERSHEY_SIMPLEX,0.4,Scalar(0,255,0));\
+//        imshow("test",src);
         for(int j=i+1;j<ellipses.size();++j){
-            /***************计算中心距********************/
-            float dist= static_cast<float>(sqrt(pow(ellipses[i].center.x-ellipses[j].center.x,2)+
-                                                pow(ellipses[i].center.y-ellipses[j].center.y,2)));
-            float averH=(ellipses[i].size.height+ellipses[j].size.height)/2;
-            if(dist/averH > centerDist)  continue;    //最远按照大装甲的尺寸来算，中心距不超过灯条高度的4.04倍
-
+            //校核两灯条的角度差
             float angleErr=abs(ellipses[i].angle-ellipses[j].angle);
             if(angleErr > 90)  angleErr=180-angleErr;
             if(angleErr > angleDiff) continue;
+            //校核两灯条长度差异
             float heightRatio;
             heightRatio=ellipses[i].size.height>ellipses[j].size.height?
                         ellipses[i].size.height/ellipses[j].size.height:
                         ellipses[j].size.height/ellipses[i].size.height;
-            if(heightRatio>barLMaxRatio) continue;   //两装甲灯条的长度之比不应过大
+            if(heightRatio>barLMaxRatio) continue;
+            //计算中心距
+            float dist= static_cast<float>(sqrt(pow(ellipses[i].center.x-ellipses[j].center.x,2)+
+                                                pow(ellipses[i].center.y-ellipses[j].center.y,2)));
+            float averH=(ellipses[i].size.height+ellipses[j].size.height)/2;
+            if(dist/averH > centerDist)  continue;    //最远按照大装甲的尺寸来算，中心距不超过灯条高度的4.04倍
             Armor armor;
             armor.set(ellipses[i],ellipses[j]);
-            if(dist>averH*2.5)                       //小装甲宽度与灯条高度之比2.3377,取2.5
+            if(dist>averH*2.34)                       //小装甲宽度与灯条高度之比2.3377
                 armor.isNormalArmor=false;
             //检验装甲的两对角线之间夹角是否过小
             Point2f diagonal1=armor.corners[0]-armor.corners[2];
@@ -256,13 +326,54 @@ void ArmorDetect::LEDMatch(vector<vector<Point>> &contours,vector<Armor> &armors
             double l1=sqrt(pow(diagonal1.x,2)+pow(diagonal1.y,2));
             double l2=sqrt(pow(diagonal2.x,2)+pow(diagonal2.y,2));
             double ratio=l1>l2?l1/l2:l2/l1;
-            if(ratio>4) continue;
+            if(ratio>5)  continue;
             armors.emplace_back(armor);
             if(showDraw)
                 for(int k=0;k<4;++k){
                     line(sketch,armor.corners[k],armor.corners[(k+1)%4],Scalar(255,255,255),3);
-                    textToImage(sketch,k,armor.corners[(k+1)%4]);
+                    textToImage(sketch,k,armor.corners[k]);
                 }
+        }
+    }
+}
+
+
+void ArmorDetect::LEDMatchX(vector<vector<Point>> &contours, vector<AreaX> &areaXs) {
+    vector<AreaX>().swap(areaXs);
+    for(int i=0;i<contours.size();++i){
+        for(int j=i+1;j<contours.size();++j){
+            //校核角度是否符合实际几何关系
+            float angleErr=abs(ellipses[i].angle-ellipses[j].angle);
+            if((angleErr<60)||(angleErr>100)){
+                char str[10];
+                sprintf(str,"%1.0f",angleErr);
+                textToImage(sketch,str,(ellipses[i].center+ellipses[j].center)/2);
+                continue;
+            }
+            //校核两灯条长度差异
+            float heightRatio;
+            heightRatio=ellipses[i].size.height>ellipses[j].size.height?
+                        ellipses[i].size.height/ellipses[j].size.height:
+                        ellipses[j].size.height/ellipses[i].size.height;
+            if(heightRatio>barLMaxRatioX)      continue;
+            //校核中心距
+            float dist= static_cast<float>(sqrt(pow(ellipses[i].center.x-ellipses[j].center.x,2)+
+                                                pow(ellipses[i].center.y-ellipses[j].center.y,2)));
+            float averH=(ellipses[i].size.height+ellipses[j].size.height)/2;
+            if(dist/averH > centerDistX)       continue;
+            AreaX areaX;
+            areaX.set(ellipses[i],ellipses[j]);
+            char str[10];
+            sprintf(str,"%1.1f",areaX.axisAngle);
+            textToImage(src,str,areaX.center);
+            ellipse(src,ellipses[i],Scalar(255,0,0));
+            ellipse(src,ellipses[j],Scalar(255,0,0));
+//            imshow("test",src);
+            if(abs(areaX.axisAngle)>10)        continue;
+            for(int k=0;k<4;++k){
+                line(sketch,areaX.corners[k],areaX.corners[(k+1)%4],Scalar(255,255,255),3);
+            }
+            areaXs.emplace_back(areaX);
         }
     }
 }
@@ -278,7 +389,7 @@ void ArmorDetect::transfromArmorPic(vector<Armor> &armors,vector<Mat> &rectArmor
         cv::warpPerspective(src,rect,warp_mat,cv::Size(H,W));
         rectArmors.emplace_back(rect);
 //        if(showDraw){
-//            char str[4];
+//            char str[10];
 //            sprintf(str,"%d",i);
 //            imshow(str,rectArmor);
 //        }
@@ -311,12 +422,33 @@ int ArmorDetect::findArmor(cv::Mat &frame, vector<Armor> &armors) {
     this->armors=armors;
 }
 
+/****************************************************************
+ *
+ * @param frame :输入图像
+ * @param areaX ：输出参数
+ * @return      ：寻找到的对象数量
+ */
+int ArmorDetect::findLEDX(Mat &frame, vector<AreaX> &areaXs) {
+    src=frame;
+    if(showDraw)      frame.copyTo(sketch);
+    if(showOrigin)    imshow("src",src);
+    if(showSlideBar)  namedWindow("Slider",WINDOW_AUTOSIZE);
+    resetAll();
+    drawCenterLine(sketch,imgCenter);
+    toGray(src,gray,showGray);
+    binaryProcess(gray,binary,thresh,showBinary);
+    contoursProcess(binary,contours);
+    LEDMatchX(contours,areaXs);
+    this->areaXs=areaXs;
+    return 0;
+}
 /**************************************************************
  * 重置所有过程变量
  */
 void ArmorDetect::resetAll() {
     vector<Mat>()          .swap(rectArmors);
     vector<Armor>()        .swap(armors);
+    vector<AreaX>()        .swap(areaXs);
     vector<RotatedRect>()  .swap(ellipses);
     vector<vector<Point>>().swap(LEDBar);
     vector<vector<Point>>().swap(contours);
@@ -328,3 +460,6 @@ void ArmorDetect::setSize(const Size size,const Point offset) {
     this->offset   =offset;
     this->imgCenter=Point(size.width/2-offset.x,size.height/2-offset.y);
 }
+
+
+

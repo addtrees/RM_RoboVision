@@ -14,41 +14,52 @@ void* ModeAchieve::debugMode(){
     cout<<"****************debug mode***************"<<endl;
 
     Timer timer;
-    cv::Mat frame;
     ProcessVal val;
     vector<Armor> armors;
+    vector<AreaX> areaXs;
     Point target;
-    Camera camera("../others/paramList/cameraParam.yaml");
     Setting setter("../others/paramList/settingParam.yaml");
     AngleSolve angleSolver("../others/paramList/pnpParam.yaml");
     ArmorDetect detector("../others/paramList/armorDetectParam.yaml");
 
-    camera.read(frame);
-    detector.setSize(camera.imgSize,camera.offset);
-    angleSolver.setSize(camera.imgSize,camera.offset);
+    detector.setSize(camera->imgSize,camera->offset);
+    angleSolver.setSize(camera->imgSize,camera->offset);
     cout<<"start!!!"<<endl;
+    while(frame.empty()){}
     do{
-        camera.read(frame);
-        if (frame.empty()) break;
-        detector.findArmor(frame, armors);
-        //angleSolver.getSerialData(RxMsg);
-        target=decision(detector,angleSolver);
-        if(armors.empty()) {
-            cout << "skip..........." << endl;
-            write2Serial(angleSolver, *serial, false);
-        } else
+        if (frame.empty()) continue;
+        if(setter.detectMode==0){
+            detector.findArmor(frame,armors);
+            angleSolver.getSerialData(RxMsg);
+            target=decision(detector,angleSolver,SOLVE_OBJ_ARMOR);
+        }
+        else{
+            detector.findLEDX(frame,areaXs);
+//            angleSolver.getSerialData(RxMsg);
+            target=decision(detector,angleSolver,SOLVE_OBJ_AREAX);
+        }
+
+        if(serial->fd!=-1){
+            armors.empty()?
+            write2Serial(angleSolver,*serial,false):
             write2Serial(angleSolver,*serial,true);
+        }
         if(detector.showDraw){
             circle(detector.sketch,target,5,Scalar(0,255,0),2);
+//            resize(detector.sketch,detector.sketch,Size(640,400));
             imshow("sketch",detector.sketch);
         }
         droneWaitKey(setter);
+        waitKeyFlag=setter.droneWaitkey;
+        readOneFrame=setter.readOneFrame;
         val.update(detector);
         waitkeyAction(setter,val);
         printFPS(timer);
     }while(setter.key!='q');
+    destroyAllWindows();
     averageTime(timer);
     averageFPS(timer);
+    STOP=1;
 }
 
 void ModeAchieve::calibration(){
@@ -86,18 +97,31 @@ void ModeAchieve::trainNumberRecognizeModel(){
 
 void* ModeAchieve::msgDeal() {
     if(serial->fd==-1){
+        int i=10;
         do{
             serial=new Serial("../others/paramList/serialParam.yaml");
             if(serial->fd!=-1)
                 break;
-        }while(serial->fd==-1);
+            else{
+                delete serial;
+                sleep(1);
+            }
+        }while(i--!=0);
+        if(serial->fd==-1)
+        return nullptr;
     }
     do{
-//        cout<<"read size:"<<serial->readBuffer(RxMsg,10)<<endl;
-        if(serial->showRxMsg && serial->readBuffer(RxMsg,10)==10){
+        size_t c=serial->readBuffer(RxMsg,10);
+        if(serial->showRxMsg && c==10){
+            if(serial->showRxMsg){
+                cout<<serial->portName<<"RxMsg:";
+                for(int k=0;k<10;++k)
+                    cout<<" "<<int(RxMsg[k]);
+                cout<<endl;
+            }
             cout<<serial->portName<<" check:";
-            char c=RxMsg[1]+RxMsg[3]+RxMsg[5];
-            if(c==RxMsg[9])
+            char cb=char((RxMsg[1]+RxMsg[3]+RxMsg[5])%255);
+            if(cb==RxMsg[9])
                 cout<<"pass"<<endl;
             else
                 cout<<"error"<<endl;
@@ -106,14 +130,33 @@ void* ModeAchieve::msgDeal() {
     return nullptr;
 }
 
+bool* ModeAchieve::readImage() {
+    do{
+        Mat temp;
+        do{
+            if(waitKeyFlag || readOneFrame){
+                readOneFrame=0;
+                temp=Mat();
+                camera->read(temp);
+            }
+        }while(temp.empty());
+            frame=temp;
+    }while(STOP==0);
+    return nullptr;
+}
+
 bool ModeAchieve::debugMode_2_thread() {
     thread t1(&ModeAchieve::debugMode,this);
     thread t2(&ModeAchieve::msgDeal,this);
+    thread t3(&ModeAchieve::readImage,this);
     t1.join();
     t2.join();
-    return false;
+    t3.join();
+    return true;
 }
 
 ModeAchieve::ModeAchieve() {
     serial =new Serial("../others/paramList/serialParam.yaml");
+    camera =new Camera("../others/paramList/cameraParam.yaml");
 }
+

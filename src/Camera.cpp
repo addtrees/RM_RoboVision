@@ -54,6 +54,7 @@ bool Camera::read(cv::Mat &frame) {
 /*******************工业相机防掉线*************************/
         while(frame.empty()){
             delete camera.industrialcamera;
+            sleep(1);
             camera.industrialcamera=new MindVisionCamera();
             flag=camera.industrialcamera->read(frame);
         }

@@ -9,6 +9,9 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
 
+#define SOLVE_OBJ_ARMOR 111
+#define SOLVE_OBJ_AREAX 112
+
 using namespace std;
 using namespace cv;
 
@@ -23,7 +26,7 @@ public:
     //基于世界坐标重建的解算方法，解算出对应的P,Y轴角度
     void getAngle_3DSolve(vector<Point2f> &points, bool isNormalArmor);
     //基于相机坐标解算的方法，最终计算出打击点在图像上的像素位置
-    Point getAngle_Pixel(vector<Point2f> &points, bool isNormalArmor);
+    Point getAngle_Pixel(vector<Point2f> &points,int solveObj,bool isNormalArmor=false);
     bool  getSerialData(char *data);
     void  setSize(Size size,Point offset);
     Point offset;
@@ -67,6 +70,7 @@ private:
     double targetPitch,targetYaw;                //最终目标变量
     vector<Point3f> largeArmorPts3D;
     vector<Point3f> normalArmorPts3D;
+    vector<Point3f> areaXPts3D;
 
     /*******************从参数表读入********************/
     Mat cameraMatrix;
@@ -77,6 +81,9 @@ private:
     const double baseHeight=1.4 ;                  //基地距离地面高度
     const Size2f normalArmorSize=Size2f(130.4,111.56);
     const Size2f largeArmorSize =Size2f(225.4,111.56);
+    const float  areaXTop       =57.79;  //从结构祖给的solidworks模型中测量得到的
+    const float  areaXDown      =150.9;
+    const float  areaXHeight    =38.77;
     double bulletSpeed=31;
     const double g = 9.7949;  //nanjing
     //const double g=9.7887;  //shenzhen

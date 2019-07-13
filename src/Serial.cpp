@@ -40,18 +40,18 @@ Serial::Serial(string serialParamPath) {
 }
 
 size_t Serial::readBuffer(char *inputBuffer, size_t bufferSize) {
-    ssize_t size=read(fd,inputBuffer,bufferSize);
-    if(size==bufferSize){
-        if(showRxMsg){
-            cout<<"serial "<<portName<<" RxMsg:";
-            for(int i=0;i<bufferSize;++i)
-                cout<<int(inputBuffer[i])<<"\t";
-            cout<<endl;
-        } else
-            cout<<"read buffer failed."<<endl;
-        return bufferSize;
-    } else
-        return size_t(size);
+    size_t size=read(fd,inputBuffer,bufferSize);
+//    if(size==bufferSize){
+//        if(showRxMsg){
+//            cout<<"serial "<<portName<<" RxMsg:";
+//            for(int i=0;i<bufferSize;++i)
+//                cout<<int(inputBuffer[i])<<"\t";
+//            cout<<endl;
+//        } else
+//            cout<<"read buffer failed."<<endl;
+//        return bufferSize;
+//    } else
+        return size;
 }
 
 size_t Serial::writeBuffer(char *outputBuffer, size_t bufferSize) {

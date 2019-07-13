@@ -31,7 +31,9 @@ void pnpSolution(vector<cv::Point[4]> corners,cv::Mat &positionInfo);
 void ballisticSolution(cv::Mat positionInfo,int droneState[3],cv::Point &targetPoint);
 
 //according to the armor's size,target position,make the best choice to shoot,this function will remove those useless objects
-Point decision(ArmorDetect &detector,AngleSolve &angleSolver);
+Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj);
+
+Point decisionX(ArmorDetect &detector,AngleSolve &angleSolver);
 
 void write2Serial(AngleSolve &solve,Serial &serial,bool isDetected);
 

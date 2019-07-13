@@ -9,7 +9,7 @@ using namespace std;
 int main(int argv,char **argc) {
     ModeAchieve god;
     if(argv==1)
-        god.debugMode();//_2_thread
+        god.debugMode_2_thread();//
     else if(argv==2){
         switch (argc[1][0]){
             case 'f':

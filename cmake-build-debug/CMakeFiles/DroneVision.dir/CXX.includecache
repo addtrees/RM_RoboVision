@@ -31,6 +31,8 @@ opencv2/opencv.hpp
 -
 iostream
 -
+unistd.h
+-
 MindVisionCamera.h
 ../include/MindVisionCamera.h
 CameraDefine.h
@@ -140,36 +142,6 @@ iostream
 time.h
 -
 
-/home/hero/CLionProjects/DroneVision/include/IndustrialCamera/MindVisionCamera.h
-IndustrialCamera/CameraApi.h
-/home/hero/CLionProjects/DroneVision/include/IndustrialCamera/IndustrialCamera/CameraApi.h
-opencv2/opencv.hpp
--
-
-/home/hero/CLionProjects/DroneVision/src/AngleSolve.cpp
-AngleSolve.h
-/home/hero/CLionProjects/DroneVision/src/AngleSolve.h
-
-/home/hero/CLionProjects/DroneVision/src/ArmorDetect.cpp
-ArmorDetect.h
-/home/hero/CLionProjects/DroneVision/src/ArmorDetect.h
-
-/home/hero/CLionProjects/DroneVision/src/Calibrate.cpp
-Calibrate.h
-/home/hero/CLionProjects/DroneVision/src/Calibrate.h
-
-/home/hero/CLionProjects/DroneVision/src/Camera.cpp
-Camera.h
-/home/hero/CLionProjects/DroneVision/src/Camera.h
-
-/home/hero/CLionProjects/DroneVision/src/MindVisionCamera.cpp
-IndustrialCamera/CameraDefine.h
--
-string
--
-../include/IndustrialCamera/MindVisionCamera.h
-/home/hero/CLionProjects/DroneVision/include/IndustrialCamera/MindVisionCamera.h
-
 /home/hero/CLionProjects/DroneVision/src/ModeAchieve.cpp
 ModeAchieve.h
 -
@@ -178,29 +150,13 @@ ModeAchieve.h
 
 /home/hero/CLionProjects/DroneVision/src/ProcessStep.cpp
 ProcessStep.h
-/home/hero/CLionProjects/DroneVision/src/ProcessStep.h
-
-/home/hero/CLionProjects/DroneVision/src/Serial.cpp
-Serial.h
 -
-Serial.h
-/home/hero/CLionProjects/DroneVision/src/Serial.h
-
-/home/hero/CLionProjects/DroneVision/src/SpatialSolution.cpp
-SpatialSolution.h
-/home/hero/CLionProjects/DroneVision/src/SpatialSolution.h
-
-/home/hero/CLionProjects/DroneVision/src/admin/ProcessVal.cpp
-admin/ProcessVal.h
-/home/hero/CLionProjects/DroneVision/src/admin/admin/ProcessVal.h
+ProcessStep.h
+/home/hero/CLionProjects/DroneVision/src/ProcessStep.h
 
 /home/hero/CLionProjects/DroneVision/src/admin/Setting.cpp
 admin/Setting.h
 /home/hero/CLionProjects/DroneVision/src/admin/admin/Setting.h
-
-/home/hero/CLionProjects/DroneVision/src/admin/Timer.cpp
-admin/Timer.h
-/home/hero/CLionProjects/DroneVision/src/admin/admin/Timer.h
 
 /home/hero/CLionProjects/DroneVision/src/main.cpp
 thread

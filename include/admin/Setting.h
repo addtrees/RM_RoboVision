@@ -20,6 +20,7 @@ public:
     string serialName="/dev/ttyUSB0";
 
     char key=' ';
+    int detectMode=0;
     int showOrigin=0;
     int showGray=0;
     int showBinary=0;
@@ -30,6 +31,7 @@ public:
     int printArmorPos=0;  //cout 输出装甲三维位置信息
     int printLoopTime=1;
     int droneWaitkey=0;
+    int readOneFrame=0;
     int saveVideo=0;
     int writerFlag=0;
     int savePic=0;
