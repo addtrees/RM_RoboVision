@@ -9,10 +9,11 @@ AngleSolve::AngleSolve(string pnpParamPath) {
     fs.isOpened()?cout<<" opened."<<endl<<endl:cout<<" open failed."<<endl<<endl;
     if(!fs.isOpened())
         exit(-1);
-    fs["cameraMatrix"]>>cameraMatrix;
-    fs["distCoffs"]   >>distCoeffs;
+    fs["cameraMatrix"]   >>cameraMatrix;
+    fs["distCoffs"]      >>distCoeffs;
     fs["showTargetAngle"]>>showTargetAngle;
-    fs["showTargetPt"]>>showTargetPt;
+    fs["showTargetPt"]   >>showTargetPt;
+    fs["areaXSizeRatio"] >>areaXSizeRatio;
     fs.release();
     get3dPoint();
     focalX=cameraMatrix.at<double>(0,0);
@@ -26,7 +27,7 @@ void AngleSolve::setSize(Size size,Point offset) {
     this->offset =offset;
     this->imgCenter =Point(imgSize.width/2-offset.x,imgSize.height/2-offset.y);
     cout<<"offset:"<<offset<<endl
-        <<"image cennter:"<<imgCenter<<endl;
+        <<"image center:"<<imgCenter<<endl;
 }
 
 /******************************************************************
@@ -103,18 +104,27 @@ Point rollTransform(Point &targetPoint,Point2f armorCenter,double roll){
 }
 
 bool AngleSolve::getSerialData(char *data) {
-    u_data altitudeRx;
-    u_data rollRx;
-    u_data bulletSpeedRx;
-    altitudeRx.c_data[0]   =data[1];
-    altitudeRx.c_data[1]   =data[2];
-    rollRx.c_data[0]       =data[3];
-    rollRx.c_data[1]       =data[4];
-    bulletSpeedRx.c_data[0]=data[5];
-    bulletSpeedRx.c_data[1]=data[6];
-    altitude   =double(float(altitudeRx.s_data)/100);
-    ptzRoll    =rollRx.s_data*CV_PI/180;
-    bulletSpeed=bulletSpeedRx.s_data;
+    u_data yawRx,rollRx,pitchRx;
+    char bulletSpeedRx;
+    bulletSpeedRx     =data[1];
+    //第二位为敌我颜色设置，角度解算里不需要
+    yawRx.c_data[0]   =data[3];
+    yawRx.c_data[1]   =data[4];
+    rollRx.c_data[0]  =data[5];
+    rollRx.c_data[1]  =data[6];
+    pitchRx.c_data[0] =data[7];
+    pitchRx.c_data[1] =data[8];
+    double temp;
+    temp=bulletSpeedRx/10.0+20;  //弹速不发十位，因为弹速肯定都在20以上
+    bulletSpeed=temp>25&&temp<30?temp:bulletSpeed;
+    temp=float(yawRx.s_data)/100.0*CV_PI/180.0;
+    ptzYaw=abs(temp<180)?temp:ptzYaw;
+    temp=float(rollRx.s_data)/100.0*CV_PI/180.0;
+    ptzRoll    =abs(temp)<8?temp:ptzRoll;
+    temp=float(pitchRx.s_data)/100.0*CV_PI/180.0;
+    ptzPitch=temp<10&&temp>-40?temp:ptzPitch;
+    printf("ptzYaw:%2.2f  ptzRoll:%2.2f  ptzPitch:%2.2f  bulletSpeed:%2.2f\n"
+            ,ptzYaw/CV_PI*180,ptzRoll/CV_PI*180,ptzPitch/CV_PI*180,bulletSpeed);
 }
 
 void AngleSolve::pnp(vector<Point2f> corners,
@@ -146,13 +156,16 @@ void AngleSolve::getCCS() {
     CX=tvec.at<double>(0,0)/1000;
     CY=tvec.at<double>(0,1)/1000;
     CZ=tvec.at<double>(0,2)/1000;
+    cout<<"CCS:"<<tvec<<endl;
 }
 
 void AngleSolve::getWCS() {
+    getTransformMatrix();
     WCS=transformMatrix*tvec+T;
-    WX=WCS.at<double>(0,0)/1000;
-    WY=WCS.at<double>(0,1)/1000;
-    WZ=WCS.at<double>(0,2)/1000;
+    WX=WCS.at<double>(0,0)/1000.0;
+    WY=WCS.at<double>(0,1)/1000.0;
+    WZ=WCS.at<double>(0,2)/1000.0;
+    cout<<"WCS:"<<WCS<<endl;
 }
 
 void AngleSolve::reconstruct2Img() {
@@ -184,8 +197,9 @@ void AngleSolve::getAngle_3DSolve(vector<Point2f> &points, bool isNormalArmor) {
     getTransformMatrix();
     getCCS();
     getWCS();
-    reconstructionPt.x=double(imgSize.width)/2+CX/CZ*focalX;
-    reconstructionPt.y=double(imgSize.height)/2+CY/CZ*focalY;
+    cout<<"image center:"<<imgCenter<<endl;
+    reconstructionPt.x=double(imgCenter.x)+CX/CZ*focalX;
+    reconstructionPt.y=double(imgCenter.y)+CY/CZ*focalY;
     reconstruct2Img();
 }
 
@@ -200,16 +214,19 @@ Point AngleSolve::getAngle_Pixel(vector<Point2f> &points,int solveObj,bool isNor
         targetPt=imgCenter;
         return targetPt;
     }
-    reconstructionPt.x=double(imgSize.width)/2+offset.x+CX/CZ*focalX;
-    reconstructionPt.y=double(imgSize.height)/2+offset.y+CY/CZ*focalY;
-    double height=altitude-baseHeight;
-    Point center=Point(imgSize.width/2-30+offset.x,imgSize.height/2-35+offset.y);
+    Point center=Point(imgCenter.x-30,imgCenter.y-35);
     if(solveObj==SOLVE_OBJ_ARMOR){
         vector<Point3f> armorCorners3D=isNormalArmor?normalArmorPts3D:largeArmorPts3D;
         pnp(points,armorCorners3D,center,cameraMatrix,distCoeffs,rvec,tvec);
     }else
         pnp(points,areaXPts3D,center,cameraMatrix,distCoeffs,rvec,tvec);
     getCCS();
+    getWCS();
+    cout<<"image center:"<<imgCenter<<endl;
+    reconstructionPt.x=imgCenter.x+CX/CZ*focalX;
+    reconstructionPt.y=imgCenter.y+CY/CZ*focalY;
+//    double height=altitude-baseHeight;
+    double height=WY;
     double lineDist=sqrt(CX*CX+CY*CY+CZ*CZ);  //相机与装甲的直线距离
     double theta=asin(height/lineDist);       //装甲和发射连线与竖直轴的夹角（弧度制）,恒为正
     double targetAngle;                       //弹道解算之后枪口需要对准的位置的绝对角度，高于水平面为正

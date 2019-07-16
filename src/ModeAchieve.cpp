@@ -2,8 +2,6 @@
 // Created by hero on 19-5-31.
 //
 
-#include <ModeAchieve.h>
-
 #include "ModeAchieve.h"
 
 void* ModeAchieve::droneAttack(){
@@ -13,45 +11,55 @@ void* ModeAchieve::droneAttack(){
 void* ModeAchieve::debugMode(){
     cout<<"****************debug mode***************"<<endl;
 
-    Timer timer;
-    ProcessVal val;
+    Timer         timer;
+    ProcessVal    val;
     vector<Armor> armors;
     vector<AreaX> areaXs;
-    Point target;
-    Setting setter("../others/paramList/settingParam.yaml");
-    AngleSolve angleSolver("../others/paramList/pnpParam.yaml");
-    ArmorDetect detector("../others/paramList/armorDetectParam.yaml");
+    Point         target;
+    Setting       setter("../others/paramList/settingParam.yaml");
+    AngleSolve    angleSolver("../others/paramList/pnpParam.yaml");
+    ArmorDetect   detector("../others/paramList/armorDetectParam.yaml");
 
     detector.setSize(camera->imgSize,camera->offset);
     angleSolver.setSize(camera->imgSize,camera->offset);
     cout<<"start!!!"<<endl;
     while(frame.empty()){}
     do{
-        if (frame.empty()) continue;
+        if (frame.empty()||imgHasDeal==1) continue;
         if(setter.detectMode==0){
             detector.findArmor(frame,armors);
-            angleSolver.getSerialData(RxMsg);
+//            angleSolver.getSerialData(RxMsg);
             target=decision(detector,angleSolver,SOLVE_OBJ_ARMOR);
         }
         else{
             detector.findLEDX(frame,areaXs);
-//            angleSolver.getSerialData(RxMsg);
+            angleSolver.getSerialData(RxMsg);
             target=decision(detector,angleSolver,SOLVE_OBJ_AREAX);
         }
 
         if(serial->fd!=-1){
-            armors.empty()?
-            write2Serial(angleSolver,*serial,false):
-            write2Serial(angleSolver,*serial,true);
+            bool isDetected=armors.empty()&&areaXs.empty()?false:true;
+            write2Serial(angleSolver,*serial,TxMsg,isDetected);
         }
         if(detector.showDraw){
             circle(detector.sketch,target,5,Scalar(0,255,0),2);
-//            resize(detector.sketch,detector.sketch,Size(640,400));
+            resize(detector.sketch,detector.sketch,Size(640,400));
+//            resize(detector.sketch,detector.sketch,Size(1,1));
             imshow("sketch",detector.sketch);
+        }
+        if(serial->showMsgTogether){
+            cout<<"Tx";
+            for(int i=0;i<10;++i)
+                cout<<" "<<int(TxMsg[i]);
+            cout<<"\tRx:";
+            for(int i=0;i<10;++i)
+                cout<<" "<<int(RxMsg[i]);
+            cout<<endl;
         }
         droneWaitKey(setter);
         waitKeyFlag=setter.droneWaitkey;
         readOneFrame=setter.readOneFrame;
+        imgHasDeal=1;
         val.update(detector);
         waitkeyAction(setter,val);
         printFPS(timer);
@@ -112,19 +120,15 @@ void* ModeAchieve::msgDeal() {
     }
     do{
         size_t c=serial->readBuffer(RxMsg,10);
-        if(serial->showRxMsg && c==10){
-            if(serial->showRxMsg){
-                cout<<serial->portName<<"RxMsg:";
+        if(serial->showRxMsgInTime && c==10){
+            if(serial->showRxMsgInTime){
+                cout<<serial->portName<<"Rx:";
                 for(int k=0;k<10;++k)
                     cout<<" "<<int(RxMsg[k]);
+                char cb=char((RxMsg[1]+RxMsg[3]+RxMsg[5])%255);
+                cb==RxMsg[9]?cout<<"  pass":cout<<"  error";
                 cout<<endl;
             }
-            cout<<serial->portName<<" check:";
-            char cb=char((RxMsg[1]+RxMsg[3]+RxMsg[5])%255);
-            if(cb==RxMsg[9])
-                cout<<"pass"<<endl;
-            else
-                cout<<"error"<<endl;
         }
     }while(STOP==0);
     return nullptr;
@@ -141,6 +145,7 @@ bool* ModeAchieve::readImage() {
             }
         }while(temp.empty());
             frame=temp;
+            imgHasDeal=0;
     }while(STOP==0);
     return nullptr;
 }

@@ -49,6 +49,7 @@ Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj) {
             Point3f tempDist=Point3f(angleSolver.CX,angleSolver.CY,angleSolver.CZ);
             targetPts.emplace_back(temp);
             ptsPosition.emplace_back(tempDist);
+            circle(detector.sketch,angleSolver.reconstructionPt,4,Scalar(0,0,255),2);
             circle(detector.sketch,temp,2,Scalar(255,255,255));
         }
     }
@@ -68,8 +69,8 @@ Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj) {
     else
         detector.finalAreaX=detector.areaXs[index];
     angleSolver.targetPt=targetPts[index];
-    cout<<"target point:"<<targetPts[index]<<endl;
-    cout<<"position:"<<ptsPosition[index]<<endl;
+//    cout<<"target point:"<<targetPts[index]<<endl;
+    cout<<"distance:"<<ptsPosition[index].z<<endl;
     return angleSolver.targetPt;
 }
 
@@ -143,7 +144,7 @@ void waitkeyAction(Setting &setter,ProcessVal &val){
             sprintf(outVideoName, "../others/video/%ld.avi", fileNames.size()+1);
             cout<<"save video:"<<outVideoName<<endl;
             val.videoWriter.open(outVideoName, VideoWriter::fourcc('M', 'J', 'P', 'G'),
-                                 100, Size(val.src.cols, val.src.rows), true);
+                                 25, Size(val.src.cols, val.src.rows), true);
             val.videoWriter<<val.src;
             frameCount++;
         }else{
@@ -157,7 +158,7 @@ union sint_char{
     char dataChar[2];
     short int dataInt;
 };
-void write2Serial(AngleSolve &solve, Serial &serial,bool isDetected) {
+void write2Serial(AngleSolve &solve, Serial &serial,char *TxMsg,bool isDetected) {
     char data[10];
     data[0]=0xff;
     sint_char offsetX;
@@ -188,10 +189,11 @@ void write2Serial(AngleSolve &solve, Serial &serial,bool isDetected) {
     data[7]=0;
     data[8]=char((detaX+detaY)/10);
     data[9]=char(254);
-    cout<<endl;
+    for(int i=0;i<10;++i)
+        TxMsg[i]=data[i];
     size_t i=serial.writeBuffer(data,10);
     if(i==10){
-        if(serial.showTxMsg){
+        if(serial.showTxMsgInTime){
             cout<<serial.portName<<" Tx:";
             for(int k=0;k<10;++k)
                 cout<<" "<<int(data[k]);

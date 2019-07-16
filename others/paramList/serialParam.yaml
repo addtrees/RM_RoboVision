@@ -1,6 +1,7 @@
 %YAML:1.0
 ---
 portName: /dev/ttyUSB0
-showRxMsg: 1
-showTxMsg: 1
+showMsgTogether: 1
+showRxMsgInTime: 0
+showTxMsgInTime: 0
 inwar: 0

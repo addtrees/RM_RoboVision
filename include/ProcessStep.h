@@ -35,7 +35,7 @@ Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj);
 
 Point decisionX(ArmorDetect &detector,AngleSolve &angleSolver);
 
-void write2Serial(AngleSolve &solve,Serial &serial,bool isDetected);
+void write2Serial(AngleSolve &solve,Serial &serial,char *TxMsg,bool isDetected);
 
 void printLoopTime(Timer &timer);
 

@@ -39,7 +39,7 @@ public:
     Point2d ballisticPt;                            //由位置信息解算弹道后反向重建于图像上的投影点
 
     /*******从串口传输过来的数据**********/
-    double altitude=1.78;                           //无人机高度
+    double altitude=1.79;                           //无人机高度
     double ptzAngleV[3]={0.0,0.0,0.0};              //云台角速度
     double ptzAngleA[3]={0.0,0.0,0.0};              //云台角加速度
 
@@ -57,6 +57,7 @@ private:
              Mat &rvec,
              Mat &tvec);
     void getTransformMatrix();
+    void calcHeightDist(Mat CCS,Mat WCS);
     void getCCS();
     void getWCS();
     void reconstruct2Img();
@@ -78,16 +79,18 @@ private:
     double focalX,focalY;
 
     /*********************恒量*************************/
-    const double baseHeight=1.4 ;                  //基地距离地面高度
+    const double baseHeight=1.52 ;                //基地距离地面高度
     const Size2f normalArmorSize=Size2f(130.4,111.56);
     const Size2f largeArmorSize =Size2f(225.4,111.56);
-    const float  areaXTop       =57.79;  //从结构祖给的solidworks模型中测量得到的
-    const float  areaXDown      =150.9;
-    const float  areaXHeight    =38.77;
-    double bulletSpeed=31;
-    const double g = 9.7949;  //nanjing
-    //const double g=9.7887;  //shenzhen
-    //const double g=9.7944;  //xi'an
+    //从结构祖给的solidworks模型中测量得到的
+    float  areaXSizeRatio                =0.67;
+    const float  areaXTop       =float(57.79*areaXSizeRatio);     //57.79
+    const float  areaXDown      =float(150.9*areaXSizeRatio);     //150.9
+    const float  areaXHeight    =float(38.77*areaXSizeRatio);     //38.77
+    double bulletSpeed=28;
+    const double g = 9.7949;                      //nanjing
+    //const double g=9.7887;                        //shenzhen
+    //const double g=9.7944;                        //xi'an
 
 };
 

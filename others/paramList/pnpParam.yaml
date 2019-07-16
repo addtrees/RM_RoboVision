@@ -9,8 +9,9 @@ imgPath: ../others/calibration/
 chessBoardSize: [ 8, 5 ]
 rectSize: [ 100, 100 ]
 
-showTargetAngle: 1
-showTargetPt: 1
+showTargetAngle: 0
+showTargetPt:    0
+areaXSizeRatio: 0.67
 
 cameraMatrix: !!opencv-matrix
    rows: 3

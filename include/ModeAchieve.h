@@ -29,6 +29,7 @@ public:
     int readingImage=0;//read image flag
     int waitKeyFlag=1;
     int readOneFrame=0;
+    int imgHasDeal=0;
     Mat frame;
     Serial *serial;
     Camera *camera;

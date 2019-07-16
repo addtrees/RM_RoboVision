@@ -1,8 +1,8 @@
 %YAML:1.0
 ---
 isVideo: 0
-cameraType: 0 # <0:工业相机   >=0：免驱相机
-videoPath: ../others/video/3.avi
+cameraType: -1 # <0:工业相机   >=0：免驱相机
+videoPath: ../others/video/9.avi
 imgSize: [1280, 800 ]
 offset: [0, 150 ]
-exposureTime: 7
+exposureTime: 10

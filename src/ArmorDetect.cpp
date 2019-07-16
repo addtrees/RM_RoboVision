@@ -202,7 +202,7 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
         if(areaProportion>hullRatio){
             if(showDraw){
                 char str[100];
-                sprintf(str,"Ar:2.2%f",areaProportion);
+                sprintf(str,"Ar:%2.2f",areaProportion);
                 putText(sketch,str,contours[i][0],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,255,255));
             }
             contours.erase(contours.begin()+i);
@@ -253,16 +253,10 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
         if((enemyColor==BLUE && (float(ptBlue)/contours[i].size())>pixelCount)||  //符合设定颜色条件
            (enemyColor==RED  && (float(ptRed)/contours[i].size())>pixelCount) ||
                                 (float(ptPurple/contours[i].size()>pixelCount*0.9))){
-            if(showDraw){
-                Point2f pts[4];
-                ellipse(sketch,ellipses[i],Scalar(255,0,0),2,LINE_AA);
-                ellipses[i].points(pts);
-                for(int k=0;k<4;++k){
-                    char str[10];
-                    sprintf(str,"%d",k);
-                    putText(sketch,str,pts[k],FONT_HERSHEY_SIMPLEX,0.4,Scalar(255,255,0));
-                }
-            }
+            if(showDraw)
+                enemyColor==RED?
+                ellipse(sketch,ellipses[i],Scalar(255,0,0),2,LINE_AA):
+                ellipse(sketch,ellipses[i],Scalar(0,0,255),2,LINE_AA);
         }
         else{
             if(showDraw){
@@ -344,7 +338,7 @@ void ArmorDetect::LEDMatchX(vector<vector<Point>> &contours, vector<AreaX> &area
         for(int j=i+1;j<contours.size();++j){
             //校核角度是否符合实际几何关系
             float angleErr=abs(ellipses[i].angle-ellipses[j].angle);
-            if((angleErr<60)||(angleErr>100)){
+            if((angleErr<54)||(angleErr>84)){
                 char str[10];
                 sprintf(str,"%1.0f",angleErr);
                 textToImage(sketch,str,(ellipses[i].center+ellipses[j].center)/2);
@@ -408,6 +402,7 @@ void drawCenterLine(Mat &sketch,Point center){
  * @return       ：装甲数量
  */
 int ArmorDetect::findArmor(cv::Mat &frame, vector<Armor> &armors) {
+    if(frame.empty()) return -1;
     src=frame;
     if(showDraw)      frame.copyTo(sketch);
     if(showOrigin)    imshow("src",src);
@@ -429,6 +424,7 @@ int ArmorDetect::findArmor(cv::Mat &frame, vector<Armor> &armors) {
  * @return      ：寻找到的对象数量
  */
 int ArmorDetect::findLEDX(Mat &frame, vector<AreaX> &areaXs) {
+    if(frame.empty()) return -1;
     src=frame;
     if(showDraw)      frame.copyTo(sketch);
     if(showOrigin)    imshow("src",src);

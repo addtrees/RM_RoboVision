@@ -10,8 +10,9 @@ Serial::Serial(string serialParamPath) {
     FileStorage fs(serialParamPath,FileStorage::READ);
     if(!fs.isOpened())  exit(-1);
     fs["portName"]>>portName;
-    fs["showRxMsg"]>>showRxMsg;
-    fs["showTxMsg"]>>showTxMsg;
+    fs["showMsgTogether"]>>showMsgTogether;
+    fs["showRxMsgInTime"]>>showRxMsgInTime;
+    fs["showTxMsgInTime"]>>showTxMsgInTime;
     fs["inWar"]>>inWar;
     fs.release();
 
@@ -62,7 +63,7 @@ size_t Serial::writeBuffer(char *outputBuffer, size_t bufferSize) {
 
 bool Serial::readByte(char *inputData) {
     if(1==write(fd,inputData,1)){
-        if(showRxMsg)
+        if(showRxMsgInTime)
             cout<<"serial Rx byte: "<<inputData<<endl;
         return true;
     }
@@ -71,7 +72,7 @@ bool Serial::readByte(char *inputData) {
 
 bool Serial::writeByte(char *outputData) {
     if(1==write(fd,outputData,1)){
-        if(showTxMsg)
+        if(showTxMsgInTime)
             cout<<"serial Rx byte: "<<outputData<<endl;
         return true;
     }

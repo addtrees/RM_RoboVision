@@ -30,8 +30,9 @@ public:
     bool readByte(char *inputData);
     bool writeByte(char *outputData);
     void closeSerial();
-    int showTxMsg=0;
-    int showRxMsg=0;
+    int showMsgTogether=0;
+    int showTxMsgInTime=0;
+    int showRxMsgInTime=0;
     int inWar=0;
     int fd;
     string portName;
