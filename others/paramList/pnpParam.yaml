@@ -1,5 +1,6 @@
 %YAML:1.0
 ---
+hideAllDebug: 0
 cameraType: -1 # <0:工业相机   >=0：免驱相机
 patternType: 0  #0:方格  1：圆点
 imgPath: ../others/calibration/
@@ -9,7 +10,7 @@ imgPath: ../others/calibration/
 chessBoardSize: [ 8, 5 ]
 rectSize: [ 100, 100 ]
 
-showTargetAngle: 0
+showTargetAngle: 1
 showTargetPt:    0
 areaXSizeRatio: 0.67
 

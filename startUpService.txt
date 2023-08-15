@@ -1,0 +1,3 @@
+#run startup appllication  by terminal
+gnome-session-properties
+

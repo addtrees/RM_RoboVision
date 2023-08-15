@@ -15,19 +15,22 @@ AngleSolve::AngleSolve(string pnpParamPath) {
     fs["showTargetPt"]   >>showTargetPt;
     fs["areaXSizeRatio"] >>areaXSizeRatio;
     fs.release();
+    areaXTop   =float(57.79*areaXSizeRatio);
+    areaXDown  =float(150.9*areaXSizeRatio);
+    areaXHeight=float(38.77*areaXSizeRatio);
     get3dPoint();
     focalX=cameraMatrix.at<double>(0,0);
     focalY=cameraMatrix.at<double>(1,1);
-    cout<<"focalX:"<<focalX<<endl
-        <<"focalY:"<<focalY<<endl;
+//    cout<<"focalX:"<<focalX<<endl
+//        <<"focalY:"<<focalY<<endl;
 }
 
 void AngleSolve::setSize(Size size,Point offset) {
     this->imgSize=size;
     this->offset =offset;
     this->imgCenter =Point(imgSize.width/2-offset.x,imgSize.height/2-offset.y);
-    cout<<"offset:"<<offset<<endl
-        <<"image center:"<<imgCenter<<endl;
+//    cout<<"offset:"<<offset<<endl
+//        <<"image center:"<<imgCenter<<endl;
 }
 
 /******************************************************************
@@ -50,6 +53,22 @@ void AngleSolve::get3dPoint() {
     vector<Point3f>{Point3f(-dX,hX,0),Point3f(-tX,-hX,0),Point3f(tX,-hX,0),Point3f(dX,hX,0)}.swap(areaXPts3D);
 }
 
+double calcAngle(double d,double h,double v,double g){
+    //由斜抛运动运动公式推算出的一元二次方程的解
+    double a=0.5*g*d*d/v/v;
+    double b=d;
+    double c=-(0.5*g*d*d/v/v)-h;
+    double theta1=atan((-b+sqrt(b*b-(4*a*c)))/2/a);
+    double theta2=atan((-b-sqrt(b*b-(4*a*c)))/2/a);
+//    cout<<"theta1:"<<theta1*180/CV_PI<<" theta2:"<<theta2*180/CV_PI<<endl;
+    if(theta1*180/CV_PI<10&&theta1*180/CV_PI>-40)
+        return theta1;
+    else if(theta2*180/CV_PI<10&&theta2*180/CV_PI>-40)
+        return theta2;
+    else
+        return 360;
+}
+
 /*************************************************************
  * 参数中角度均为弧度制
  * @param distance 相机与物体的水平距离
@@ -69,13 +88,13 @@ bool computeAngle(Point3d coordinate,
                   const double accuracy,
                   const double g,
                   const double v){
-    double distance=sqrt(pow(coordinate.x,2)+pow(coordinate.y,2)+pow(coordinate.z,2));
+    double distance=sqrt(pow(coordinate.y,2)+pow(coordinate.z,2));
     double theta=asin(height/distance);
     double tempMin=min,
            tempMax=max,
            middle =(min+max)/2;
     double lowY,upperY;
-    height=-height;
+    height=height;
     do{
         lowY  =tan(tempMin)*cos(theta)*distance-0.5*g*pow(distance,2)*pow(cos(theta),2)
                 /(v*v*pow(cos(tempMin),2));
@@ -115,16 +134,15 @@ bool AngleSolve::getSerialData(char *data) {
     pitchRx.c_data[0] =data[7];
     pitchRx.c_data[1] =data[8];
     double temp;
-    temp=bulletSpeedRx/10.0+20;  //弹速不发十位，因为弹速肯定都在20以上
-    bulletSpeed=temp>25&&temp<30?temp:bulletSpeed;
-    temp=float(yawRx.s_data)/100.0*CV_PI/180.0;
-    ptzYaw=abs(temp<180)?temp:ptzYaw;
-    temp=float(rollRx.s_data)/100.0*CV_PI/180.0;
-    ptzRoll    =abs(temp)<8?temp:ptzRoll;
-    temp=float(pitchRx.s_data)/100.0*CV_PI/180.0;
-    ptzPitch=temp<10&&temp>-40?temp:ptzPitch;
-    printf("ptzYaw:%2.2f  ptzRoll:%2.2f  ptzPitch:%2.2f  bulletSpeed:%2.2f\n"
-            ,ptzYaw/CV_PI*180,ptzRoll/CV_PI*180,ptzPitch/CV_PI*180,bulletSpeed);
+    temp       =bulletSpeedRx/10.0+20;  //弹速不发十位，因为弹速肯定都在20以上
+    bulletSpeed=temp>24&&temp<35?temp:bulletSpeed;
+    ptzYaw     =float(yawRx.s_data)/100.0*CV_PI/180;
+    ptzRoll    =float(rollRx.s_data)/100.0*CV_PI/180;
+    ptzPitch   =float(pitchRx.s_data)/100.0*CV_PI/180;
+    camYaw     =ptzYaw-90*CV_PI/180;
+    camRoll    =ptzPitch-90*CV_PI/180;
+//    printf("ptzYaw:%2.2f  ptzRoll:%2.2f  ptzPitch:%2.2f  bulletSpeed:%2.2f\n"
+//            ,ptzYaw/CV_PI*180,ptzRoll/CV_PI*180,ptzPitch/CV_PI*180,bulletSpeed);
 }
 
 void AngleSolve::pnp(vector<Point2f> corners,
@@ -156,7 +174,7 @@ void AngleSolve::getCCS() {
     CX=tvec.at<double>(0,0)/1000;
     CY=tvec.at<double>(0,1)/1000;
     CZ=tvec.at<double>(0,2)/1000;
-    cout<<"CCS:"<<tvec<<endl;
+//    cout<<"CCS:"<<tvec<<endl;
 }
 
 void AngleSolve::getWCS() {
@@ -165,7 +183,7 @@ void AngleSolve::getWCS() {
     WX=WCS.at<double>(0,0)/1000.0;
     WY=WCS.at<double>(0,1)/1000.0;
     WZ=WCS.at<double>(0,2)/1000.0;
-    cout<<"WCS:"<<WCS<<endl;
+//    cout<<"WCS:"<<WCS<<endl;
 }
 
 void AngleSolve::reconstruct2Img() {
@@ -187,7 +205,28 @@ void AngleSolve::reconstruct2Img() {
     //cout<<"reCCS:"<<reCCS<<endl;
     ballisticPt.x=reCX/reCZ*focalX/100+imgSize.width/2;
     ballisticPt.y=reCY/reCZ*focalY/100+imgSize.height/2;
-    cout<<"ballistcPt:"<<ballisticPt<<endl;
+//    cout<<"ballistcPt:"<<ballisticPt<<endl;
+}
+
+/****************************************************************
+ *
+ * @param obj       :object in image
+ * @param ptzPitch  :
+ * @param imgCenter :
+ * @param focalY    :Use radian system
+ * @param altitude  :
+ * @return          :altitude
+ */
+double calcAltitudeDist(Point2f obj,double ptzPitch,double distanceYZ,Point imgCenter,double focalY,double &altitude){
+    double obj2Axis=-atan((obj.y-imgCenter.y)/focalY);
+    ptzPitch=(ptzPitch*180/CV_PI+1.55)*CV_PI/180;  //fix the error between the camera and the gun
+    double obj2level=ptzPitch+obj2Axis;
+//    cout<<"ptzPitch:"<<ptzPitch*180/CV_PI<<endl;
+//    cout<<"obj2AxisA:"<<obj2Axis*180/CV_PI<<endl;
+//    cout<<"obj2levelA:"<<obj2level*180/CV_PI<<endl;
+//    cout<<"distYZ:"<<distanceYZ<<endl;
+    altitude=distanceYZ*sin(obj2level);
+    return altitude;
 }
 
 void AngleSolve::getAngle_3DSolve(vector<Point2f> &points, bool isNormalArmor) {
@@ -197,7 +236,7 @@ void AngleSolve::getAngle_3DSolve(vector<Point2f> &points, bool isNormalArmor) {
     getTransformMatrix();
     getCCS();
     getWCS();
-    cout<<"image center:"<<imgCenter<<endl;
+//    cout<<"image center:"<<imgCenter<<endl;
     reconstructionPt.x=double(imgCenter.x)+CX/CZ*focalX;
     reconstructionPt.y=double(imgCenter.y)+CY/CZ*focalY;
     reconstruct2Img();
@@ -222,29 +261,51 @@ Point AngleSolve::getAngle_Pixel(vector<Point2f> &points,int solveObj,bool isNor
         pnp(points,areaXPts3D,center,cameraMatrix,distCoeffs,rvec,tvec);
     getCCS();
     getWCS();
-    cout<<"image center:"<<imgCenter<<endl;
+//    cout<<"image center:"<<imgCenter<<endl;
     reconstructionPt.x=imgCenter.x+CX/CZ*focalX;
     reconstructionPt.y=imgCenter.y+CY/CZ*focalY;
 //    double height=altitude-baseHeight;
-    double height=WY;
-    double lineDist=sqrt(CX*CX+CY*CY+CZ*CZ);  //相机与装甲的直线距离
-    double theta=asin(height/lineDist);       //装甲和发射连线与竖直轴的夹角（弧度制）,恒为正
+//    double height=WY;
+    Point2f objCenter=(points[0]+points[1]+points[2]+points[3])/4;
+    double distYZ=sqrt(pow(CY,2)+pow(CZ,2));
+    double height=calcAltitudeDist(objCenter,ptzPitch,distYZ,imgCenter,focalY,height);
+//    cout<<"height:"<<height<<endl;
+    double lineDist=sqrt(CY*CY+CZ*CZ);        //相机与装甲在YZ面的直线距离
+    double theta=asin(height/lineDist);       //装甲和发射连线与竖直轴的夹角（弧度制）
+    double levelDist=cos(theta)*lineDist;     //水平距离
     double targetAngle;                       //弹道解算之后枪口需要对准的位置的绝对角度，高于水平面为正
     Point3d coordinate=Point3d(CX,CY,CZ);
-    computeAngle(coordinate,height,-50*CV_PI/180,50*CV_PI/180,targetAngle,0.0001,g,bulletSpeed);
-    if(showTargetAngle)
-        cout<<"target angle:"<<targetAngle*180/CV_PI<<endl;
+//    computeAngle(coordinate,height,-50*CV_PI/180,50*CV_PI/180,targetAngle,0.0001,g,bulletSpeed);
+    double count=0;
+    double filter=0;
+//    levelDist=levelDist>1.5?10.5:levelDist;
+//    levelDist=levelDist<7 ?7 :levelDist;
+    for(int i=0;i<4;++i){
+        distFilter[i]=distFilter[i+1];
+        count+=distFilter[i];
+        filter+=distFilter[i]*(i+1);
+    }
+    count+=levelDist;
+    distFilter[4]=levelDist;
+    filter+=distFilter[4]*5;
+    if(count>7*5){
+        levelDist=filter/15;
+//        cout<<"FilterLevelDist:"<<levelDist<<endl;
+    }
+    targetAngle=calcAngle(levelDist,height,bulletSpeed,g)+(1.1*CV_PI/180);
+//    if(showTargetAngle)
+//        cout<<"target angle:"<<targetAngle*180/CV_PI<<endl;
     /********角度解算关键部分*************/
     Point2f armorCenter;
     armorCenter=Point(points[0]+points[1]+points[2]+points[3])/4;
-    double raiseAngle=theta+targetAngle;     //枪口轴线与相机和装甲连线之间的角度（弧度）
-    double camrea2Axis=atan((armorCenter.y-imgCenter.y)/focalY);
-    int detaY=int(focalY*(tan(raiseAngle-camrea2Axis)+tan(camrea2Axis)));
+    double raiseAngle=-theta+targetAngle;     //枪口轴线与相机和装甲连线之间的角度（弧度）+(1.05*CV_PI/180)
+    double obj2Axis=atan((armorCenter.y-imgCenter.y)/focalY);
+    int detaY=int(focalY*(tan(raiseAngle-obj2Axis)+tan(obj2Axis)));
     targetPt.y=int(armorCenter.y-detaY);
     targetPt.x=int(armorCenter.x);
     rollTransform(targetPt,armorCenter,ptzRoll);
-    if(showTargetPt)
-        cout<<"targetPT:"<<targetPt<<endl;
+//    if(showTargetPt)
+//        cout<<"targetPT:"<<targetPt<<endl;
     return targetPt;
 }
 

@@ -1,5 +1,6 @@
 %YAML:1.0
 ---
+hideAllDebug:  0
 detectMode:    1            # 0:detect normally armor board, 1:detect the X area
 showOrigin:    0
 showGray:      0

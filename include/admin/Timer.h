@@ -20,7 +20,6 @@ public:
     Timer();
     double averageTime();
     double getLoopTime();
-    string getDate();
 };
 
 

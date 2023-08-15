@@ -45,7 +45,8 @@ Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj) {
         }
     } else{
         for(int i=0;i<detector.areaXs.size();++i){
-            Point temp=angleSolver.getAngle_Pixel(detector.areaXs[i].v_corners,SOLVE_OBJ_AREAX);
+            Point temp =angleSolver.getAngle_Pixel(detector.areaXs[i].v_corners,SOLVE_OBJ_AREAX);
+//            Point tempA=angleSolver.getAngle_Pixel(detector.armors[i].v_corners,SOLVE_OBJ_ARMOR,detector.armors[i].isNormalArmor);
             Point3f tempDist=Point3f(angleSolver.CX,angleSolver.CY,angleSolver.CZ);
             targetPts.emplace_back(temp);
             ptsPosition.emplace_back(tempDist);
@@ -70,7 +71,7 @@ Point decision(ArmorDetect &detector,AngleSolve &angleSolver,int solveObj) {
         detector.finalAreaX=detector.areaXs[index];
     angleSolver.targetPt=targetPts[index];
 //    cout<<"target point:"<<targetPts[index]<<endl;
-    cout<<"distance:"<<ptsPosition[index].z<<endl;
+//    cout<<"distance:"<<sqrt(pow(ptsPosition[index].x,2)+pow(ptsPosition[index].y,2)+pow(ptsPosition[index].z,2))<<endl;
     return angleSolver.targetPt;
 }
 
@@ -99,6 +100,8 @@ char droneWaitKey(Setting &setter){
     setter.key=char(waitKey(setter.droneWaitkey));
     switch(setter.key){
         case 'x':
+            if(setter.droneWaitkey==0)
+                setter.readOneFrame=1;
             setter.droneWaitkey=0;
             break;
         case 'c':
@@ -164,10 +167,12 @@ void write2Serial(AngleSolve &solve, Serial &serial,char *TxMsg,bool isDetected)
     sint_char offsetX;
     sint_char offsetY;
     short detaX,detaY;
-    Point center=Point(solve.imgSize.width/2-solve.offset.x,solve.imgSize.height/2-solve.offset.y);
+    int x=5;
+    int y=3;
+    Point center=Point(solve.imgSize.width/2-solve.offset.x+x,solve.imgSize.height/2-solve.offset.y+y);
     if(isDetected){
-        detaX=offsetX.dataInt=solve.targetPt.x;
-        detaY=offsetY.dataInt=solve.targetPt.y;
+        detaX=offsetX.dataInt=solve.targetPt.x+x;
+        detaY=offsetY.dataInt=solve.targetPt.y+y;
     }else{
         detaX=offsetX.dataInt=center.x;
         detaY=offsetY.dataInt=center.y;
@@ -176,16 +181,17 @@ void write2Serial(AngleSolve &solve, Serial &serial,char *TxMsg,bool isDetected)
     data[2]=offsetX.dataChar[1];
     data[3]=offsetY.dataChar[0];
     data[4]=offsetY.dataChar[1];
-    if(isDetected)
+    if(isDetected){
         data[5]=1;
-    else
+        double err=sqrt(pow(detaX-center.x,2)+pow(detaY-center.y,2));
+//        printf("err:%2.2f\n",err);
+        data[6]=err<15?char(1):char(0);
+    }
+    else{
         data[5]=0;
-    double err=sqrt(pow(detaX-center.x,2)+pow(detaY-center.y,2));
-    cout<<"err:"<<err<<endl;
-    if(err<15)
-        data[6]=1;
-    else
         data[6]=0;
+//        printf("err:inf");
+    }
     data[7]=0;
     data[8]=char((detaX+detaY)/10);
     data[9]=char(254);

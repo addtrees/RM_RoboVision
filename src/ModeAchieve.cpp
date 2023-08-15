@@ -38,7 +38,7 @@ void* ModeAchieve::debugMode(){
         }
 
         if(serial->fd!=-1){
-            bool isDetected=armors.empty()&&areaXs.empty()?false:true;
+            bool isDetected=!(armors.empty()&&areaXs.empty());
             write2Serial(angleSolver,*serial,TxMsg,isDetected);
         }
         if(detector.showDraw){
@@ -48,7 +48,7 @@ void* ModeAchieve::debugMode(){
             imshow("sketch",detector.sketch);
         }
         if(serial->showMsgTogether){
-            cout<<"Tx";
+            cout<<"Tx:";
             for(int i=0;i<10;++i)
                 cout<<" "<<int(TxMsg[i]);
             cout<<"\tRx:";
@@ -62,12 +62,13 @@ void* ModeAchieve::debugMode(){
         imgHasDeal=1;
         val.update(detector);
         waitkeyAction(setter,val);
-        printFPS(timer);
+//        printFPS(timer);
     }while(setter.key!='q');
     destroyAllWindows();
-    averageTime(timer);
-    averageFPS(timer);
+//    averageTime(timer);
+//    averageFPS(timer);
     STOP=1;
+    exit(-1);
 }
 
 void ModeAchieve::calibration(){
@@ -131,6 +132,7 @@ void* ModeAchieve::msgDeal() {
             }
         }
     }while(STOP==0);
+    exit(-2);
     return nullptr;
 }
 
@@ -147,6 +149,7 @@ bool* ModeAchieve::readImage() {
             frame=temp;
             imgHasDeal=0;
     }while(STOP==0);
+    exit(-2);
     return nullptr;
 }
 

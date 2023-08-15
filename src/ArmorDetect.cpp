@@ -71,12 +71,12 @@ void AreaX::set(RotatedRect &rect1, RotatedRect &rect2) {
 }
 
 template <typename T>
-void textToImage(Mat &src,T text,Point position){
+void textToImage(Mat &src,T text,Point position,Scalar color){
     char str[100];
     stringstream ss;
     ss<<text;
     ss>>str;
-    putText(src,str,position,FONT_HERSHEY_SIMPLEX,0.6,Scalar(0,255,255));
+    putText(src,str,position,FONT_HERSHEY_SIMPLEX,0.6,color);
 }
 
 /**************************************************************
@@ -255,8 +255,8 @@ void ArmorDetect::contoursProcess(Mat &binary,vector<vector<Point>> &contours) {
                                 (float(ptPurple/contours[i].size()>pixelCount*0.9))){
             if(showDraw)
                 enemyColor==RED?
-                ellipse(sketch,ellipses[i],Scalar(255,0,0),2,LINE_AA):
-                ellipse(sketch,ellipses[i],Scalar(0,0,255),2,LINE_AA);
+                ellipse(sketch,ellipses[i],Scalar(255,0,0),1,LINE_AA):
+                ellipse(sketch,ellipses[i],Scalar(0,0,255),1,LINE_AA);
         }
         else{
             if(showDraw){
@@ -325,7 +325,7 @@ void ArmorDetect::LEDMatch(vector<vector<Point>> &contours,vector<Armor> &armors
             if(showDraw)
                 for(int k=0;k<4;++k){
                     line(sketch,armor.corners[k],armor.corners[(k+1)%4],Scalar(255,255,255),3);
-                    textToImage(sketch,k,armor.corners[k]);
+                    textToImage(sketch,k,armor.corners[k],Scalar(0,255,255));
                 }
         }
     }
@@ -341,7 +341,7 @@ void ArmorDetect::LEDMatchX(vector<vector<Point>> &contours, vector<AreaX> &area
             if((angleErr<54)||(angleErr>84)){
                 char str[10];
                 sprintf(str,"%1.0f",angleErr);
-                textToImage(sketch,str,(ellipses[i].center+ellipses[j].center)/2);
+                textToImage(sketch,str,(ellipses[i].center+ellipses[j].center)/2,Scalar(0,0,255));
                 continue;
             }
             //校核两灯条长度差异
@@ -349,21 +349,32 @@ void ArmorDetect::LEDMatchX(vector<vector<Point>> &contours, vector<AreaX> &area
             heightRatio=ellipses[i].size.height>ellipses[j].size.height?
                         ellipses[i].size.height/ellipses[j].size.height:
                         ellipses[j].size.height/ellipses[i].size.height;
-            if(heightRatio>barLMaxRatioX)      continue;
+            if(heightRatio>barLMaxRatioX){
+
+                continue;
+            }
             //校核中心距
             float dist= static_cast<float>(sqrt(pow(ellipses[i].center.x-ellipses[j].center.x,2)+
                                                 pow(ellipses[i].center.y-ellipses[j].center.y,2)));
             float averH=(ellipses[i].size.height+ellipses[j].size.height)/2;
-            if(dist/averH > centerDistX)       continue;
+            if(dist/averH > centerDistX){
+
+                continue;
+            }
             AreaX areaX;
             areaX.set(ellipses[i],ellipses[j]);
             char str[10];
             sprintf(str,"%1.1f",areaX.axisAngle);
-            textToImage(src,str,areaX.center);
-            ellipse(src,ellipses[i],Scalar(255,0,0));
-            ellipse(src,ellipses[j],Scalar(255,0,0));
+            textToImage(src,str,areaX.center,Scalar(0,0,255));
+            ellipse(src,ellipses[i],Scalar(255,0,0),1);
+            ellipse(src,ellipses[j],Scalar(255,0,0),1);
 //            imshow("test",src);
-            if(abs(areaX.axisAngle)>10)        continue;
+            if(abs(areaX.axisAngle)>15) {
+                char str[10];
+                sprintf(str,"%1.1f",areaX.axisAngle);
+                textToImage(sketch,str,(ellipses[i].center+ellipses[j].center)/2,Scalar(0,255,0));
+                continue;
+            }
             for(int k=0;k<4;++k){
                 line(sketch,areaX.corners[k],areaX.corners[(k+1)%4],Scalar(255,255,255),3);
             }
@@ -434,6 +445,7 @@ int ArmorDetect::findLEDX(Mat &frame, vector<AreaX> &areaXs) {
     toGray(src,gray,showGray);
     binaryProcess(gray,binary,thresh,showBinary);
     contoursProcess(binary,contours);
+//    LEDMatch(contours,armors);
     LEDMatchX(contours,areaXs);
     this->areaXs=areaXs;
     return 0;

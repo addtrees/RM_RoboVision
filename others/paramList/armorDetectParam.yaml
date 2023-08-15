@@ -3,6 +3,7 @@
 #最重要的参数
 enemyColor: 1                            # 0:blue  1:red  2:all
 
+hideAllDebug: 0
 #调试变量显示控制开关
 showOrigin:   0
 showGray:     0
@@ -28,4 +29,4 @@ barAMaxRatio:    -1.
 angleDiff:       10.0
 centerDist:      4.8                     #计算标准值为4.04，留一定余量
 barLMaxRatioX:   1.8                     #八字区域的两灯条长度差异比例
-centerDistX:     2.0                     #实际尺寸计算得到的是中间距离为灯条长度的1.87倍
+centerDistX:     2.3                     #实际尺寸计算得到的是中间距离为灯条长度的1.87倍

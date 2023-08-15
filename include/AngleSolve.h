@@ -34,7 +34,9 @@ public:
     Point imgCenter=Point(imgSize.width/2-offset.x,imgSize.height/2-offset.y);
     Point targetPt;                                 //解算后应该对着图像中心的点
     double CX,CY,CZ;                                //装甲板在相机坐标系的坐标
-    double ptzYaw=0,ptzPitch=0,ptzRoll=0*CV_PI/180;
+    double distFilter[5];
+    double ptzYaw=0,ptzPitch=0,ptzRoll=0;
+    double camYaw=ptzRoll,camPitch=ptzYaw-90*CV_PI/180,camRoll=ptzPitch-90*CV_PI/180;
     Point2d reconstructionPt;                       //由PnP解算出来的装甲的位置信息在图像上的重投影点
     Point2d ballisticPt;                            //由位置信息解算弹道后反向重建于图像上的投影点
 
@@ -83,10 +85,10 @@ private:
     const Size2f normalArmorSize=Size2f(130.4,111.56);
     const Size2f largeArmorSize =Size2f(225.4,111.56);
     //从结构祖给的solidworks模型中测量得到的
-    float  areaXSizeRatio                =0.67;
-    const float  areaXTop       =float(57.79*areaXSizeRatio);     //57.79
-    const float  areaXDown      =float(150.9*areaXSizeRatio);     //150.9
-    const float  areaXHeight    =float(38.77*areaXSizeRatio);     //38.77
+    float  areaXSizeRatio =0.0;
+    float  areaXTop       =0.0;     //57.79
+    float  areaXDown      =0.0;     //150.9
+    float  areaXHeight    =0.0;     //38.77
     double bulletSpeed=28;
     const double g = 9.7949;                      //nanjing
     //const double g=9.7887;                        //shenzhen

@@ -20,6 +20,3 @@ double Timer::averageTime() {
     double averageTime=(getTickCount()-start)/getTickFrequency()*1000/timeCounter;
     return averageTime;
 }
-string Timer::getDate() {
-
-}
